@@ -1,0 +1,564 @@
+---
+title: "CAGED - Cadastro Geral de Empregados e Desempregados"
+date: "`r format(Sys.time(), '%d de %B, %Y')`"
+subtitle: '**Secretaria de Desenvolvimento Econômico, Inovação e Tecnologia**'
+output:
+  pdf_document:
+    includes:
+      in_header: header.tex
+  word_document: default
+  html_document:
+    df_print: paged
+fontsize: 11pt
+---
+
+**Diretoria de Estudos Econômicos** 
+
+Fábio Rocha. ^[Graduado em Filosofia pela UFOP; Graduando em Ciências Econômicas pela UFOP; atua na Diretoria de Estudos Econômicos da Secretaria Municipal de Desenvolvimento Econômico, Inovação e Tecnologia da Prefeitura Municipal de Ouro Preto.]
+
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+library(tidyverse)
+library(readxl)
+library(readr)
+library(dplyr)
+library(lubridate)
+library(scales)
+library(knitr)
+library(gt)
+library(glue)
+
+```
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+caged <- read_excel("caged_municipal.xlsx", sheet = 1, col_names = TRUE)
+
+```
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+emprego_estoque <- caged[1:169,]
+
+```
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+emprego_estoque<- emprego_estoque %>%
+  filter(variavel %in% c("Estoque", "Estoque*** (Estoque de referência de 2022)")) %>% 
+  mutate(data = parse_date(periodo, format='%B/%Y', locale=locale('pt')))
+
+
+```
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+
+adm_des <- caged %>%
+  filter(variavel %in% c("Admissões", "Desligamentos")) %>% 
+  mutate(data = parse_date(periodo, format='%B/%Y', locale=locale('pt')))
+
+```
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+saldo <- caged %>%
+filter(variavel %in% c("Saldos"))
+
+saldo <- saldo[1:34,]
+
+saldo <- saldo %>% 
+  mutate(data = parse_date(periodo, format='%B/%Y', locale=locale('pt')))
+
+```
+
+```{r, echo=F, eval=T, results='asis', fig.width=8, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+emprego_estoque_total <- emprego_estoque %>%
+  pivot_longer(c("Mg-Itabirito","Mg-Ouro Preto","Mg-Mariana","Mg-Ouro Branco", "Mg-Congonhas"), 
+               names_to = "Municípios", values_to = "Valor")
+
+emprego_estoque_total <- emprego_estoque_total  %>%
+  select(data, `Municípios`, Valor)
+           
+```
+
+### Introdução
+
+O mês de outubro encerrou com estoque de trabalho recuando 0,08% (-13) pela primeira vez depois de apresentar crescimento entre janeiro-2022 a setembro-2022 no município de Ouro Preto, de acordo com o ultimo dado divulgado pelo CAGED nesta terça-feira, 29 de outubro. O estoque recuou de 16897 (setembro) ^[No ultimo relatório publicado informamos que o estoque era de 16900. Esse dado não estava incorreto. O que acontece é que mensalmente o Ministério da Economia faz revisões e ajustes nas tabelas. Então é sempre possível que alguns valores sejam alterados de um mês para o outro.] para a 16884 (outubro). Esse recuo significou uma geração de 2027 novos postos de trabalho no ano de 2022 e não 2040 como mostrado no relatório passado. A seguir esses dados são apresentados de forma gráfica e tabular.
+
+### Estoque de trabalho - CAGED
+
+Nesta primeira parte apresentamos o estoque de trabalho dos municípios selecionados e Ouro Preto, a partir dos dados do Novo CAGED. Importante destacar que estoque é a quantidade total de vínculos celetistas (em regime de CLT) ativos. ^[Ministério do Trabalho e Previdência, 2022.]
+
+Observando o primeiro gráfico, que traz os estoque de trabalho de cada município ao longo do tempo (2020-2022), vericamos que o município de Mariana apresentou um recuo um pouco mais forte quando comparado a Ouro Preto. Esse recuo, tanto no município de Ouro Preto quanto em Mariana foi liderado pelo setor de Construção, que nos ultimos meses empregou grande quantidade de trabalhadores. Na verdade, Ouro Preto, Congonhas e Ouro Branco apresentam uma certa estabilidade, e Itabirito cresce um pouco mais, puxado pelo setor Serviço.
+
+```{r, echo=F, eval=T, results='asis', fig.width=10, fig.height=6, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+ggplot(emprego_estoque_total, aes(x=data, y=Valor))+
+  geom_line(color="red")+
+  theme_bw()+
+  facet_wrap(~Municípios, scale = "free", nrow = 3, ncol = 2)+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 0.9))+
+  annotate("rect", fill = "blue", alpha = 0.2,
+           xmin = as.Date("2022-09-01"),
+           xmax = as.Date("2022-11-01"),
+           ymin = -Inf, 
+           ymax = Inf)+
+  theme(legend.position = "right",
+        legend.title = element_blank(),
+        plot.title = ggplot2::element_text(face = "bold"),
+        plot.subtitle = ggplot2::element_text(face = "italic"),
+        legend.text = ggplot2::element_text(face = "bold"))+
+  scale_x_date(breaks = date_breaks("2 month"),
+               labels = date_format("%b%y"))+
+  labs(x='Mês/Ano', 
+       y='Estoque',
+    title="Cadastro Geral de Empregados e Desempregados (CAGED)",
+    subtitle = "Estoque - (Janeiro/2020 a Outubro/2022)",
+    caption='Fonte: Secretaria de Desenvolvimento Economico, Inovação e Tecnologia com dados do CAGED')
+           
+```
+
+```{r, echo=F, eval=T, results='asis', fig.width=9, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+ggplot(emprego_estoque, aes(x=data)) +
+   annotate("rect", fill = "blue", alpha = 0.2,
+           xmin = as.Date("2022-09-01"),
+           xmax = as.Date("2022-11-01"),
+           ymin = -Inf, 
+           ymax = Inf)+
+  geom_line(aes(y=`Mg-Itabirito`, color="Itabirito"), size=1)+
+  geom_line(aes(y=`Mg-Mariana`, color="Mariana"), size=1)+
+  geom_line(aes(y=`Mg-Ouro Preto`, color="Ouro Preto"), size=1)+
+  geom_line(aes(y=`Mg-Ouro Branco`, color="Ouro Branco"), size=1)+
+  geom_line(aes(y=`Mg-Congonhas`, color="Congonhas"), size=1)+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 0.9))+
+  scale_x_date(breaks = seq(from = min(emprego_estoque$data),
+                               to = max(emprego_estoque$data),
+                               by = 0.75))+
+  theme(legend.position = "right",
+        legend.title = element_blank(),
+        plot.title = ggplot2::element_text(face = "bold"),
+        plot.subtitle = ggplot2::element_text(face = "italic"),
+        legend.text = ggplot2::element_text(face = "bold"))+
+  scale_x_date(breaks = date_breaks("2 month"),
+               labels = date_format("%b%y"))+
+  labs(x='Mês/Ano', 
+       y='Estoque',
+    title="Cadastro Geral de Empregados e Desempregados (CAGED)",
+    subtitle = "Estoque (Janeiro/2020 a Outubro/2022)",
+    caption='Fonte: Secretaria de Desenvolvimento Economico, Inovação e Tecnologia com dados do CAGED')
+
+```
+
+
+No comparativo de janeiro de 2020 a outubro de 2022, o estoque apresentou crescimento de 13,62%. Já no comparativo com o mês imediatamente anterior a outubro de 2022, o recuo foi de 0,08%.
+
+Entretanto, embora tenha ocorrido queda no estoque, essa redução teve pouco efeito no mercado de trabalho local. Mesmo com esse recuo, o estoque de trbalho permanece elevado quando consideramos toda série histórica, janeiro-2020 a outubro-2022.
+
+```{r, echo=F, eval=T, results='asis', fig.width=9, fig.height=6, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+ggplot(emprego_estoque, aes(x=data)) +
+  geom_line(aes(y=`Mg-Ouro Preto`), size=1)+
+  theme_bw()+
+  geom_hline(yintercept=16900, colour='darkred', linetype='dashed')+
+  theme(axis.text.x = element_text(angle= 45, hjust = 1, vjust = 0.9))+
+  scale_x_date(breaks = seq(from = min(emprego_estoque$data),
+                              to = max(emprego_estoque$data),
+                              by = 0.75))+
+  annotate("rect", fill = "blue", alpha = 0.2,
+           xmin = as.Date("2022-07-01"),
+           xmax = as.Date("2022-11-01"),
+           ymin = -Inf, 
+           ymax = Inf)+
+  annotate('text',
+           x = as.Date("2022-9-01"),
+           y = 16965,
+           label='16884',
+           colour='black', size=7)+
+  annotate('text',
+           x = as.Date("2022-01-10"),
+           y = 15100,
+           label='',
+           colour='red', size=5)+
+  annotate('text',
+           x = as.Date("2021-01-10"),
+           y = 16965,
+           label='',
+           colour='red', size=5)+
+  theme(legend.position = "top",
+        legend.title = element_blank(),
+        plot.title = ggplot2::element_text(face = "bold"),
+        plot.subtitle = ggplot2::element_text(face = "italic"),
+        legend.text = ggplot2::element_text(face = "bold"))+
+  scale_x_date(breaks = date_breaks("1 month"),
+             labels = date_format("%b%y"))+
+  labs(x='Mês/Ano', 
+       y='Estoque',
+    title="Cadastro Geral de Empregados e Desempregados (CAGED)",
+    subtitle = "Estoque (Janeiro/2020 a Outubro/2022) - Ouro Preto",
+    caption='Fonte: Secretaria de Desenvolvimento Economico, Inovação e Tecnologia com dados do CAGED')
+
+```
+
+
+```{r, echo=F, eval=T, results='asis', fig.width=8, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+empregos_totais <- saldo %>%
+  pivot_longer(c("Mg-Itabirito","Mg-Ouro Preto","Mg-Mariana","Mg-Ouro Branco", "Mg-Congonhas"), names_to = "Municípios", values_to = "Valor")
+           
+```
+
+### Saldo
+
+Na seção anterior foi apresentado o estoque de trabalho, efetivamente, o número de pessoas empregadas sob regime de CLT no município de Ouro Preto e municípios selecionados. Nesta parte apresentaremos o saldo, isto é, a diferença entre o número de contratados e demitidos.
+
+Formalmente temos que saldo é a diferença entre o número de contratados menos os desligados num determinado período de tempo. Por exemplo, se numa economia, no mês de maio, foram contratados 100 pessoas e desligadas 60, o saldo é 100 - 60 = 40; Ou ainda, se numa economia foram contratados 150 pessoas, num outro mês qualquer, e foram desligadas 180, o saldo será negativo: 150 - 180 = -30.
+
+No primeiro caso, dêmos um exemplo na qual a economia teve saldo positivo (houve mais contratações do que desligamentos); Já no segundo, dêmos um exemplo onde o número de desligamentos é superior ao de contratados.
+
+Os gráficos abaixo ilustram essas ocorrências para o mercado de trabalho das economias dos municípios selecionados.
+
+```{r, echo=F, eval=T, results='asis', fig.width=9, fig.height=7, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+#empregos_totais <- empregos_totais %>%
+#  filter(`Municípios` == "Mg-Ouro Preto")
+
+ggplot(empregos_totais, aes(x=data, y=Valor))+
+  geom_col(stat='identity',
+           position = 'identity',
+           fill=ifelse(empregos_totais$Valor < 0, '#F8766D','#00B0F6'),
+           width = 15)+
+  theme_bw()+
+  geom_text(aes(label=Valor), size=2.4, color="black", angle=45)+
+  facet_wrap(~Municípios, scale = "free", ncol=2)+
+  theme(legend.position = "right",
+        legend.title = element_blank(),
+        plot.title = ggplot2::element_text(face = "bold"),
+        plot.subtitle = ggplot2::element_text(face = "italic"),
+        legend.text = ggplot2::element_text(face = "bold"))+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 0.9))+
+  scale_x_date(breaks = date_breaks("2 month"),
+               labels = date_format("%b%y"))+
+  labs(x='Mês/Ano', 
+       y='Saldo',
+    title="Cadastro Geral de Empregados e Desempregados (CAGED)",
+    subtitle = "Saldo (Jan/2020 a Outubro/2022)",
+    caption='Fonte: Secretaria de Desenvolvimento Economico, Inovação e Tecnologia com dados do CAGED')
+           
+```
+
+Como é possível verificar no gráfico acima, Ouro Preto apresentou saldo positivo entre janeiro-2022 a setembro-2022, o que contribuiu expressivamente para elevação do seu estoque de trabalho e geração de 2027 novos postos de trabalho no ano.
+
+O saldo negativo destacado no município de Ouro Preto entre março de 2021 a agosto do mesmo ano, foi puxado, especialmente, pelo setor de construção.
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+emprego_tabela <- caged[160:169,]
+ 
+```
+
+### Tabela 1
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+emprego_tabela %>%
+  gt(groupname_col = "") %>%
+  tab_header(title = md("**CAGED**"),
+             subtitle = glue("Municípios selecionados - Setembro-2022/Outubro-2022")) %>%
+  tab_source_note(md("**Dados**: CAGED | **Elaboração**: Diretoria de Estudos Econômicos")) %>%
+  cols_label(periodo = "Mês",
+             variavel = "Variável",
+             `Mg-Ouro Preto` = "Ouro Preto",
+             `Mg-Mariana` = "Mariana",
+             `Mg-Itabirito` = "Itabirito",
+             `Mg-Congonhas` = "Congonhas",
+             `Mg-Ouro Branco`= "Ouro Branco") %>%
+  fmt_number(columns = c("Mg-Ouro Preto", "Mg-Mariana","Mg-Itabirito", "Mg-Congonhas","Mg-Ouro Branco"),
+             decimals = 2,
+             drop_trailing_zeros = TRUE,
+             sep_mark = ".")
+           
+```
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+microdados_caged <- read.csv2("P:/DESENVOLVIMENTO ECONOMICO/02 - Publico/Estudos Econômicos/Codigos2_R/CAGEDMOV202210.txt", encoding="UTF8")
+           
+```
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+microdados_caged <- microdados_caged %>%
+  filter(município %in% "314610")
+
+microdados_caged <- microdados_caged %>%
+  select(seção, 
+         saldomovimentação, 
+         graudeinstrução, 
+         idade, 
+         raçacor, 
+         sexo, 
+         salário, 
+         indicadoraprendiz)
+
+```
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+microdados_caged <- microdados_caged %>%
+  mutate(setor = ifelse(seção %in% "A", "AGRICULTURA",
+                        ifelse(seção %in% c("B","C","D","E"),"INDUSTRIA",
+                               ifelse(seção %in% "F", "CONSTRUÇÃO",
+                                      ifelse(seção %in% "G", "COMÉRCIO", "SERVIÇOS")))))
+
+```
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+microdados_caged$seção[microdados_caged$seção == "A"] <- "AGRICULTURA, PECUÁRIA E SERVIÇOS RELACIONADOS"
+
+microdados_caged$seção[microdados_caged$seção == "B"] <- "INDUSTRIA EXTRATIVA"
+
+microdados_caged$seção[microdados_caged$seção == "C"] <- "INDUSTRIA DE TRANSFORMAÇÃO"
+
+microdados_caged$seção[microdados_caged$seção == "D"] <- "ELETRICIDADE E GÁS"
+
+microdados_caged$seção[microdados_caged$seção == "E"] <- "AGUA, ESGOTO, ATIVIDADES DE GETÃO DE RESÍDUOS E DESCONTAMINAÇÃO"
+
+microdados_caged$seção[microdados_caged$seção == "F"] <- "CONSTRUÇÃO"
+
+microdados_caged$seção[microdados_caged$seção == "G"] <- "COMÉRCIO, REPARAÇÃO DE VEÍCULOS E MOTOCICLETAS"
+
+microdados_caged$seção[microdados_caged$seção == "H"] <- "TRANSPORTE, ARMAZENAGEM E CORREIO"
+
+microdados_caged$seção[microdados_caged$seção == "I"] <- "ALOJAMENTO E ALIMENTAÇÃO"
+
+microdados_caged$seção[microdados_caged$seção == "J"] <- "INFORMAÇÃO E COMUNICAÇÃO"
+
+microdados_caged$seção[microdados_caged$seção == "K"] <- "ATIVIDADES FINANCEIRAS, DE SEGUROS E SERVIÇOS RELACIONADOS"
+
+microdados_caged$seção[microdados_caged$seção == "L"] <- "ATIVIDADES IMOBILIÁRIAS"
+
+microdados_caged$seção[microdados_caged$seção == "M"] <- "ATIVIDADES PROFISSIONAIS, CIENTÍFICAS E TÉCNICAS"
+
+microdados_caged$seção[microdados_caged$seção == "N"] <- "ATIVIDADES ADMINISTRATIVAS E SERVIÇOS COMPLEMENTARES"
+
+microdados_caged$seção[microdados_caged$seção == "O"] <- "ADMINISTRAÇÃO PÚBLICA, DEFESA E SEGURIDADE SOCIAL"
+
+microdados_caged$seção[microdados_caged$seção == "P"] <- "EDUCAÇÃO"
+
+microdados_caged$seção[microdados_caged$seção == "Q"] <- "SÁUDE HUMANA E SERVIÇOS SOCIAIS"
+
+microdados_caged$seção[microdados_caged$seção == "R"] <- "ARTES, CULTURA, ESPORTE E RECREAÇÃO"
+
+microdados_caged$seção[microdados_caged$seção == "S"] <- "OUTRAS ATIVIDADES DE SERVIÇOS"
+
+microdados_caged$seção[microdados_caged$seção == "T"] <- "SERVIÇOS DOMÉSTICOS"
+
+microdados_caged$seção[microdados_caged$seção == "U"] <- "ORGANISMOS INTERNACIONAIS E OUTRAS INSTITUIÇÕES EXTRATERRITORIAIS"
+
+```
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+microdados_caged$graudeinstrução[microdados_caged$graudeinstrução == "1"] <- "Analfabeto"
+microdados_caged$graudeinstrução[microdados_caged$graudeinstrução == "2"] <- "Até 5º Incompleto"
+microdados_caged$graudeinstrução[microdados_caged$graudeinstrução == "3"] <- "5º Completo Fundamental"
+microdados_caged$graudeinstrução[microdados_caged$graudeinstrução == "4"] <- "6º a 9 Fundamentalº"
+microdados_caged$graudeinstrução[microdados_caged$graudeinstrução == "5"] <- "Fundamental Completo"
+microdados_caged$graudeinstrução[microdados_caged$graudeinstrução == "6"] <- "Médio Incompleto"
+microdados_caged$graudeinstrução[microdados_caged$graudeinstrução == "7"] <- "Médio Completo"
+microdados_caged$graudeinstrução[microdados_caged$graudeinstrução == "8"] <- "Superior Incompleto"
+microdados_caged$graudeinstrução[microdados_caged$graudeinstrução == "9"] <- "Superior Completo"
+microdados_caged$graudeinstrução[microdados_caged$graudeinstrução == "10"] <- "Mestrado"
+microdados_caged$graudeinstrução[microdados_caged$graudeinstrução == "11"] <- "Doutorado"
+microdados_caged$graudeinstrução[microdados_caged$graudeinstrução == "80"] <- "Pós-graduação completa"
+
+```
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+microdados_caged$raçacor[microdados_caged$raçacor == "1"] <- "Branca"
+microdados_caged$raçacor[microdados_caged$raçacor == "2"] <- "Preta"
+microdados_caged$raçacor[microdados_caged$raçacor == "3"] <- "Parda"
+microdados_caged$raçacor[microdados_caged$raçacor == "4"] <- "Amarela"
+microdados_caged$raçacor[microdados_caged$raçacor == "5"] <- "Indígena"
+microdados_caged$raçacor[microdados_caged$raçacor == "6"] <- "Não informada"
+microdados_caged$raçacor[microdados_caged$raçacor == "9"] <- "Não identificado"
+
+
+```
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+microdados_caged$sexo[microdados_caged$sexo == "1"] <- "Homem"
+microdados_caged$sexo[microdados_caged$sexo == "3"] <- "Mulher"
+
+```
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+microdados_caged$indicadoraprendiz[microdados_caged$indicadoraprendiz == "0"] <- "Não aprendiz"
+microdados_caged$indicadoraprendiz[microdados_caged$indicadoraprendiz == "1"] <- "Aprendiz"
+
+```
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+saldo_movimentacao_tabela <- microdados_caged %>%
+  group_by(setor,graudeinstrução) %>% 
+  summarise(saldo = sum(saldomovimentação)) %>%
+  pivot_wider(names_from = "setor", values_from = "saldo")
+
+saldo_movimentacao_tabela[12,2] <- sum(saldo_movimentacao_tabela$AGRICULTURA, na.rm = TRUE)
+saldo_movimentacao_tabela[12,3] <- sum(saldo_movimentacao_tabela$COMÉRCIO, na.rm = TRUE)
+saldo_movimentacao_tabela[12,4] <- sum(saldo_movimentacao_tabela$CONSTRUÇÃO, na.rm = TRUE)
+saldo_movimentacao_tabela[12,5] <- sum(saldo_movimentacao_tabela$INDUSTRIA, na.rm = TRUE)
+saldo_movimentacao_tabela[12,6] <- sum(saldo_movimentacao_tabela$SERVIÇOS, na.rm = TRUE)
+
+saldo_movimentacao_tabela[12,1] <- "*Saldo*"
+
+```
+
+### Microdados
+
+O Ministério do Trabalho e Previdência via PDET (Programa de Disseminação das Estatísticas do Trabalho) também disponibiliza os microdados relacionados as movimentações (contrataçoes e demissões) no mercado de trabalho formal.
+
+Microdados pode ser entendido como o dado em seu menor nível de desagregação. Ou seja, cada registro de admissão ou demissão no mercado de trabalho, de cada estabelecimento, é registrado com uma desagregação mais ampla. Por exemplo, se houve demissão ou admissão de um trabalhador, esse registro será feito de forma detalhada: sexo, idade, município, estado, raca ou cor, escolaridade, setor da economia, se é aprendiz ou não, horas trabalhadas, entre outras informações de natureza social e trabalhista.
+
+Assim, este relatório passa incorporar parte desses microdados para ampliar nossas análises. A tabela seguir mostra as movimentações ocorridas no mês de outubro, por setor e escolaridade, para o município de Ouro Preto.
+
+A tabela permite identificar que as movimentações nos setores de Serviços e Industria para o nível de escolaridade Ensino Médio, foram as que melhor performaram comparativamente aos demais setores e escolaridade.
+
+### Tabela 2
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+saldo_movimentacao_tabela[is.na(saldo_movimentacao_tabela)] = 0
+
+saldo_movimentacao_tabela %>%
+  gt(groupname_col = "") %>%
+  tab_header(title = md("**Saldo por setores da economia e escolaridade**"),
+             subtitle = glue("Ouro Preto - Outubro-2022")) %>%
+  tab_source_note(md("**Dados**: CAGED | **Elaboração**: Diretoria de Estudos Econômicos")) %>%
+  cols_label(graudeinstrução = "Escolaridade",
+             `AGRICULTURA` = "Agricultura",
+             `COMÉRCIO` = "Comércio",
+             `CONSTRUÇÃO` = "Construção",
+             `INDUSTRIA` = "Industria",
+             `SERVIÇOS` = "Serviços" )
+           
+```
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+saldo_movimentacao <- microdados_caged %>%
+  group_by(setor,graudeinstrução) %>% 
+  summarise(saldo = sum(saldomovimentação))
+
+```
+
+### Saldo de contratações e demissões por setores da economia e escolaridade
+
+A seguir são apresentados os setores da economia e suas respectivas movimentações para o mês de outubro. A Industria e Serviços foram os setores que apresentaram maior saldo positivo de contratações, especialmente para pessoas com escolaridade Ensino Médio. Já a Construção, Comércio e Agricultura fecharam o mês com uma movimentação de demissões maior do que adminissões, em maior número para o setor de Construção com 58 desligamentos.
+
+```{r, echo=F, eval=T, results='asis', fig.width=10, fig.height=8, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+ggplot(saldo_movimentacao, aes(x=graudeinstrução, y=saldo))+
+  geom_col(stat='identity',
+           position = 'identity',
+           fill=ifelse(saldo_movimentacao$saldo < 0, '#F8766D','#00B0F6'))+
+  facet_wrap(~setor, scales = "free", ncol=2)+
+  geom_text(aes(label=round(saldo,1)),size=3.5)+
+  theme_bw()+
+  coord_flip()+
+  theme(legend.position = "right",
+        legend.key.size = unit(0.5, "cm"),
+        legend.text = element_text(size=10),
+        legend.title = element_blank(),
+        plot.title = ggplot2::element_text(face = "bold"),
+        plot.subtitle = ggplot2::element_text(face = "italic"))+
+  labs(title = "Saldo de contratações e demissões por setores da economia e escolaridade",
+       subtitle = "Outubro de 2022 - Ouro Preto",
+       y="",
+       x="Grau de instrução",
+       caption = "Dados: Microdados CAGED")
+  
+
+```
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+rendimento_medio <- microdados_caged %>%
+  group_by(setor,graudeinstrução) %>% 
+  summarise(rendimento = mean(salário))
+
+```
+
+### Salário médio por setores da economia e escolaridade
+
+Quanto ao salário médio do setores da economia para o mês de setembro, lideram o setores da Industria, Serviços e Construição, para trabalhadores com escolaridade Superior ou mais. 
+
+```{r, echo=F, eval=T, results='asis', fig.width=10, fig.height=7, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+library(ggthemes)
+
+ggplot(rendimento_medio, aes(x=graudeinstrução, y=rendimento))+
+  geom_col()+
+  facet_wrap(~setor, scales = "free", nrow=4)+
+  theme_bw()+
+  coord_flip()+
+  geom_text(aes(label=round(rendimento,1)),size=3.2, hjust=1., color="white")+
+  theme(legend.position = "right",
+        legend.key.size = unit(0.5, "cm"),
+        legend.text = element_text(size=10),
+        legend.title = element_blank(),
+        plot.title = ggplot2::element_text(face = "bold"),
+        plot.subtitle = ggplot2::element_text(face = "italic"))+
+  labs(title = "Salário médio por setores da economia e escolaridade",
+       subtitle = "Outubro de 2022 - Ouro Preto",
+       y="Em reais (R$)",
+       x="",
+       caption = "Dados: Microdados CAGED")
+  
+
+```
+
+```{r, echo=F, eval=T, results='asis', fig.width=11, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+saldo_movimentacao_aprendiz <- microdados_caged %>%
+  group_by(setor,indicadoraprendiz) %>% 
+  summarise(saldo = sum(saldomovimentação))
+
+```
+
+Por fim, as movimentaçoes no mercado de trabalho formal no que tange a participação do jovem aprendiz para o mês de outubro fecha com saldo negativo apenas para o setor Comércio, enquanto que Industria e Serviços fecha com saldo positivo. 
+
+```{r, echo=F, eval=T, results='asis', fig.width=10, fig.height=5, fig.align='center', out.width=".9\\linewidth", warning=FALSE, message=FALSE, size='small'}
+
+ggplot(saldo_movimentacao_aprendiz, aes(x=setor, y=saldo))+
+  geom_col(stat='identity',
+           position = 'identity',
+           fill=ifelse(saldo_movimentacao_aprendiz$saldo < 0, '#F8766D','#00B0F6'))+
+  facet_wrap(~indicadoraprendiz, scales = "free", ncol=2)+
+  geom_text(aes(label=round(saldo,1)),size=3.5)+
+  theme_bw()+
+  coord_flip()+
+  theme(legend.position = "right",
+        legend.key.size = unit(0.5, "cm"),
+        legend.text = element_text(size=10),
+        legend.title = element_blank(),
+        plot.title = ggplot2::element_text(face = "bold"),
+        plot.subtitle = ggplot2::element_text(face = "italic"))+
+  labs(title = "Saldo de contratações e demissões por setores da economia",
+       subtitle = "Outubro de 2022 - Ouro Preto",
+       y="",
+       x="",
+       caption = "Dados: Microdados CAGED")
+  
+
+```
